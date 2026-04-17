@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { z } from 'zod';
 import type { ChatMessage } from '../../clients/localLlmChatClient.js';
 import { runLocalOpenAiCompatChatLoop } from './localOpenAiCompatLoop.js';
 import * as executeMediaTool from '../executeMediaTool.js';
@@ -174,6 +175,41 @@ describe('runLocalOpenAiCompatChatLoop (bot-owned search UI)', () => {
     expect(assistantWithTools).toBeDefined();
     expect(secondMessages.some((m) => m.role === 'tool' && 'tool_call_id' in m)).toBe(true);
     expect(res.replyText).toBe('Proceeding.');
+  });
+
+  it('returns a friendly reply when a tool call fails Zod validation', async () => {
+    createChatCompletionMock.mockResolvedValueOnce({
+      id: 'round1',
+      choices: [
+        {
+          index: 0,
+          finish_reason: 'tool_calls',
+          message: {
+            role: 'assistant',
+            content: null,
+            tool_calls: [
+              {
+                id: 'tc_bad',
+                type: 'function',
+                function: { name: 'getSeriesEpisodeStats', arguments: '{}' }
+              }
+            ]
+          }
+        }
+      ]
+    });
+
+    const zodErr = z.object({ title: z.string() }).safeParse({}).error!;
+    executeToolMock.mockRejectedValueOnce(zodErr);
+
+    const res = await runLocalOpenAiCompatChatLoop({
+      requestId: 'req-zod',
+      telegramUserId: userId,
+      userText: 'Which episodes we have in summer house',
+      systemPrompt: 'sys'
+    });
+
+    expect(res.replyText).toMatch(/could not understand that tool call/i);
   });
 });
 

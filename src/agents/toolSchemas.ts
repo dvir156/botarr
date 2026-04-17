@@ -21,9 +21,20 @@ export const CheckAvailabilityInPlexInputSchema = z.object({
   title: z.string().trim().min(1)
 });
 
-export const GetSeriesEpisodeStatsInputSchema = z.object({
-  title: z.string().trim().min(1)
-});
+export const GetSeriesEpisodeStatsInputSchema = z
+  .object({
+    /** Preferred name (used by tools + prompts). */
+    title: z.string().trim().min(1).optional(),
+    /** Alias observed in some local model tool calls. */
+    seriesTitle: z.string().trim().min(1).optional()
+  })
+  .transform((raw) => {
+    const title = raw.title ?? raw.seriesTitle;
+    if (!title) {
+      throw new Error('title is required');
+    }
+    return { title };
+  });
 
 export const CheckMovieInRadarrInputSchema = z.object({
   title: z.string().trim().min(1)

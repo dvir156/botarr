@@ -92,8 +92,13 @@ export async function startTelegramBot(): Promise<void> {
       });
     } catch (err) {
       const e = err instanceof Error ? err : new Error('Unknown error');
-      logger.error('telegram.handler.error', { error: e.message });
+      logger.error('telegram.handler.error', { error: e.message, stack: e.stack });
       if (isHttpError(err)) {
+        logger.error('telegram.handler.http_error', {
+          status: err.status,
+          method: err.method,
+          url: err.url
+        });
         await args.ctx.reply(formatHttpErrorForUser(err));
         return;
       }

@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z, ZodError } from 'zod';
 import { LocalLlmChatClient, type ChatMessage, type ChatToolCall } from '../../clients/localLlmChatClient.js';
 import { getAgentEnv } from '../../config/env.js';
 import { logger } from '../../config/logger.js';
@@ -27,7 +27,11 @@ async function runToolWithHttpHandling(args: {
   rawArguments: string;
   userText: string;
 }): Promise<{ ok: true; result: unknown } | { ok: false; replyText: string }> {
+  const log = logger.child({ requestId: args.requestId, tool: args.name });
   try {
+    log.info('tool.call', {
+      rawArgumentsPreview: (args.rawArguments ?? '').slice(0, 500)
+    });
     const result = await executeTool({
       requestId: args.requestId,
       telegramUserId: args.telegramUserId,
@@ -35,14 +39,36 @@ async function runToolWithHttpHandling(args: {
       rawArguments: args.rawArguments,
       userText: args.userText
     });
+    log.info('tool.ok');
     return { ok: true, result };
   } catch (e) {
     if (isHttpError(e)) {
+      log.error('tool.http_error', {
+        status: e.status,
+        method: e.method,
+        url: e.url
+      });
       return { ok: false, replyText: formatHttpErrorForUser(e) };
     }
     if (isToolPolicyError(e)) {
+      log.warn('tool.policy_blocked', { reason: e.message });
       return { ok: false, replyText: e.userMessage };
     }
+    if (e instanceof ZodError) {
+      log.warn('tool.validation_failed', {
+        issues: e.issues.map((i) => ({
+          path: i.path,
+          message: i.message,
+          code: i.code
+        }))
+      });
+      return {
+        ok: false,
+        replyText:
+          'Sorry — I could not understand that tool call (missing or invalid inputs). Please try again with the full movie/show title.'
+      };
+    }
+    log.error('tool.unhandled_error', { error: e instanceof Error ? e.message : String(e) });
     throw e;
   }
 }

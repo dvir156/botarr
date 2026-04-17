@@ -30,6 +30,7 @@ describe('executeTool', () => {
   const userId = 123;
   const grabMovieReleaseMock = vi.mocked(radarrTools.grabMovieRelease);
   const grabSeriesReleaseMock = vi.mocked(sonarrTools.grabSeriesRelease);
+  const getSeriesEpisodeStatsMock = vi.mocked(sonarrTools.getSeriesEpisodeStats);
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -132,5 +133,30 @@ describe('executeTool', () => {
 
     expect(grabMovieReleaseMock).toHaveBeenCalledWith({ guid: 'g-ok' }, { requestId: 'r1' });
     expect(getPendingAction(userId, Date.now())).toBeNull();
+  });
+
+  it('accepts seriesTitle alias for getSeriesEpisodeStats tool input', async () => {
+    getSeriesEpisodeStatsMock.mockResolvedValueOnce({
+      title: 'Summer House',
+      year: 2017,
+      seriesId: 1,
+      totalEpisodes: 0,
+      ownedEpisodes: 0,
+      seasonsWithOwnedEpisodes: [],
+      ownedEpisodesList: []
+    });
+
+    await executeTool({
+      requestId: 'r1',
+      telegramUserId: userId,
+      name: 'getSeriesEpisodeStats',
+      rawArguments: JSON.stringify({ seriesTitle: 'Summer House' }),
+      userText: 'Which episodes we have in summer house?'
+    });
+
+    expect(getSeriesEpisodeStatsMock).toHaveBeenCalledWith(
+      { seriesTitle: 'Summer House' },
+      { requestId: 'r1' }
+    );
   });
 });
