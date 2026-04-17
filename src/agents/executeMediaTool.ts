@@ -128,10 +128,19 @@ function requirePendingGrabAuthorization(args: {
         userMessage: 'Pick a movie release number first (or say cancel).'
       });
     }
-    const ok = pending.items.some((i) => i.toolArgs.guid === guid);
+    const indexerId = (args.parsedArgs as { indexerId?: unknown } | null | undefined)?.indexerId;
+    if (typeof indexerId !== 'number' || !Number.isFinite(indexerId) || indexerId <= 0) {
+      throw new ToolPolicyError({
+        message: `${args.name} blocked: missing/invalid indexerId`,
+        userMessage: 'Pick a release number first (or say cancel).'
+      });
+    }
+    const ok = pending.items.some(
+      (i) => i.toolArgs.guid === guid && i.toolArgs.indexerId === indexerId
+    );
     if (!ok) {
       throw new ToolPolicyError({
-        message: `${args.name} blocked: guid not in pending list`,
+        message: `${args.name} blocked: release not in pending list`,
         userMessage: 'That release choice is no longer available. Ask for releases again and pick a number.'
       });
     }
@@ -211,11 +220,16 @@ export async function executeTool(args: {
           type: 'movie_release_pick',
           createdAtMs: now,
           expiresAtMs: now + 10 * 60_000,
-          items: res.candidates.map((c) => ({
-            label: `${c.title} | ${c.quality ?? 'unknown'} | S:${c.seeders ?? 0} L:${c.leechers ?? 0}`,
-            toolName: 'grabMovieRelease',
-            toolArgs: { guid: c.guid }
-          }))
+          items: res.candidates
+            .filter(
+              (c): c is typeof c & { indexerId: number } =>
+                typeof c.indexerId === 'number' && Number.isFinite(c.indexerId) && c.indexerId > 0
+            )
+            .map((c) => ({
+              label: `${c.title} | ${c.quality ?? 'unknown'} | S:${c.seeders ?? 0} L:${c.leechers ?? 0}`,
+              toolName: 'grabMovieRelease',
+              toolArgs: { guid: c.guid, indexerId: c.indexerId }
+            }))
         });
       }
       return res;
@@ -226,7 +240,7 @@ export async function executeTool(args: {
         name: 'grabMovieRelease',
         parsedArgs
       });
-      return await grabMovieRelease(parsedArgs as { guid: string }, { requestId: args.requestId });
+      return await grabMovieRelease(parsedArgs as { guid: string; indexerId: number }, { requestId: args.requestId });
     case 'previewSeriesReleases': {
       const res = await previewSeriesReleases(parsedArgs as { seriesId: number; limit: number }, { requestId: args.requestId });
       if (typeof args.telegramUserId === 'number') {

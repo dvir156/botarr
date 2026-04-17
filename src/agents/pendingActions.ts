@@ -20,7 +20,7 @@ export type PendingAction =
       items: Array<{
         label: string;
         toolName: Extract<ToolName, 'grabMovieRelease'>;
-        toolArgs: { guid: string };
+        toolArgs: { guid: string; indexerId: number };
       }>;
     }
   | {

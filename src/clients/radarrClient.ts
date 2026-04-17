@@ -166,10 +166,10 @@ export class RadarrClient {
     }
   }
 
-  async grabRelease(releaseGuid: string): Promise<void> {
-    const url = `${this.baseUrl}/api/v3/queue/grab/${encodeURIComponent(releaseGuid)}`;
+  async grabRelease(args: { guid: string; indexerId: number }): Promise<void> {
+    const url = `${this.baseUrl}/api/v3/release`;
     try {
-      await this.http.post(`/api/v3/queue/grab/${encodeURIComponent(releaseGuid)}`);
+      await this.http.post('/api/v3/release', { guid: args.guid, indexerId: args.indexerId });
     } catch (err) {
       throw toHttpError({ err, method: 'POST', url });
     }

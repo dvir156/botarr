@@ -184,6 +184,7 @@ export type PreviewMovieReleasesResult = ReleasePreviewRecommendation & {
   candidates: Array<
     ReleaseCandidate & {
       guid: string;
+      indexerId: number | null;
     }
   >;
 };

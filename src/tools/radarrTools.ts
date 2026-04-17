@@ -235,6 +235,10 @@ export async function previewMovieReleases(
       .slice(0, parsed.limit)
       .map((r) => ({
         guid: r.guid,
+        indexerId:
+          typeof r.indexerId === 'number' && Number.isFinite(r.indexerId) && r.indexerId > 0
+            ? r.indexerId
+            : null,
         title: r.title,
         quality: r.quality?.quality?.name ?? null,
         seeders: typeof r.seeders === 'number' ? r.seeders : null,
@@ -272,9 +276,9 @@ export async function grabMovieRelease(
   const startedAt = Date.now();
 
   try {
-    log.info('tool.start', { guid: parsed.guid });
+    log.info('tool.start', { guid: parsed.guid, indexerId: parsed.indexerId });
     const client = new RadarrClient();
-    await client.grabRelease(parsed.guid);
+    await client.grabRelease({ guid: parsed.guid, indexerId: parsed.indexerId });
     const out: GrabResult = { grabbed: true, title: parsed.guid };
     log.info('tool.success', { elapsedMs: Date.now() - startedAt });
     return out;

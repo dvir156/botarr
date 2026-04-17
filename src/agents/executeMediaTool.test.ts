@@ -31,6 +31,7 @@ describe('executeTool', () => {
   const grabMovieReleaseMock = vi.mocked(radarrTools.grabMovieRelease);
   const grabSeriesReleaseMock = vi.mocked(sonarrTools.grabSeriesRelease);
   const getSeriesEpisodeStatsMock = vi.mocked(sonarrTools.getSeriesEpisodeStats);
+  const searchMovieMock = vi.mocked(radarrTools.searchMovie);
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -116,34 +117,38 @@ describe('executeTool', () => {
         {
           label: 'm',
           toolName: 'grabMovieRelease',
-          toolArgs: { guid: 'g-ok' }
+          toolArgs: { guid: 'g-ok', indexerId: 10 }
         }
       ]
     });
 
-    grabMovieReleaseMock.mockResolvedValueOnce({ ok: true });
+    grabMovieReleaseMock.mockResolvedValueOnce({ grabbed: true, title: 'Example' });
 
     await executeTool({
       requestId: 'r1',
       telegramUserId: userId,
       name: 'grabMovieRelease',
-      rawArguments: JSON.stringify({ guid: 'g-ok' }),
+      rawArguments: JSON.stringify({ guid: 'g-ok', indexerId: 10 }),
       userText: '1'
     });
 
-    expect(grabMovieReleaseMock).toHaveBeenCalledWith({ guid: 'g-ok' }, { requestId: 'r1' });
+    expect(grabMovieReleaseMock).toHaveBeenCalledWith(
+      { guid: 'g-ok', indexerId: 10 },
+      { requestId: 'r1' }
+    );
     expect(getPendingAction(userId, Date.now())).toBeNull();
   });
 
   it('accepts seriesTitle alias for getSeriesEpisodeStats tool input', async () => {
     getSeriesEpisodeStatsMock.mockResolvedValueOnce({
-      title: 'Summer House',
-      year: 2017,
+      seriesTitle: 'Summer House',
       seriesId: 1,
       totalEpisodes: 0,
-      ownedEpisodes: 0,
+      haveEpisodes: 0,
+      missingEpisodes: 0,
+      bySeason: [],
       seasonsWithOwnedEpisodes: [],
-      ownedEpisodesList: []
+      ownedEpisodesList: null
     });
 
     await executeTool({
@@ -158,5 +163,19 @@ describe('executeTool', () => {
       { seriesTitle: 'Summer House' },
       { requestId: 'r1' }
     );
+  });
+
+  it('accepts query alias for searchMovie tool input', async () => {
+    searchMovieMock.mockResolvedValueOnce({ matches: [] });
+
+    await executeTool({
+      requestId: 'r1',
+      telegramUserId: userId,
+      name: 'searchMovie',
+      rawArguments: JSON.stringify({ query: 'Thunderbolts' }),
+      userText: 'download Thunderbolts'
+    });
+
+    expect(searchMovieMock).toHaveBeenCalledWith({ query: 'Thunderbolts' }, { requestId: 'r1' });
   });
 });

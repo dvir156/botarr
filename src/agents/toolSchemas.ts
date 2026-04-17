@@ -1,8 +1,19 @@
 import { z } from 'zod';
 
-export const SearchMovieInputSchema = z.object({
-  title: z.string().trim().min(1)
-});
+export const SearchMovieInputSchema = z
+  .object({
+    /** Preferred field name. */
+    title: z.string().trim().min(1).optional(),
+    /** Alias observed in some local model tool calls. */
+    query: z.string().trim().min(1).optional()
+  })
+  .transform((raw) => {
+    const title = raw.title ?? raw.query;
+    if (!title) {
+      throw new Error('title is required');
+    }
+    return { title };
+  });
 
 export const AddMovieInputSchema = z.object({
   tmdbId: z.number().int().positive(),
@@ -46,7 +57,8 @@ export const PreviewMovieReleasesInputSchema = z.object({
 });
 
 export const GrabMovieReleaseInputSchema = z.object({
-  guid: z.string().min(1)
+  guid: z.string().min(1),
+  indexerId: z.number().int().positive()
 });
 
 export const PreviewSeriesReleasesInputSchema = z.object({

@@ -265,9 +265,22 @@ export async function startTelegramBot(): Promise<void> {
       await ctx.answerCbQuery();
       return;
     }
-    await ctx.answerCbQuery();
     const action = data.slice(RELEASE_PICK_PREFIX.length);
     const text = action === 'cancel' ? 'cancel' : action;
+
+    // Give immediate feedback to the user that the tap was received.
+    // Also remove the keyboard from the tapped message to avoid double-submits.
+    await ctx.answerCbQuery(
+      action === 'cancel' ? 'Cancelled.' : `Selected ${action}.`
+    );
+    try {
+      // Remove inline keyboard on the message that contained the buttons.
+      // Telegram will show the button press “state change” immediately.
+      await ctx.editMessageReplyMarkup(undefined);
+    } catch {
+      // Ignore if the message is not editable or reply markup already changed.
+    }
+
     await sendTypingIfPossible(ctx);
     await runSerializedForUser(fromId, () => runAgentForUser({ ctx, text, fromId }));
   });
