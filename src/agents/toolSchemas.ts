@@ -20,9 +20,20 @@ export const AddMovieInputSchema = z.object({
   qualityProfileId: z.number().int().positive()
 });
 
-export const SearchSeriesInputSchema = z.object({
-  title: z.string().trim().min(1)
-});
+export const SearchSeriesInputSchema = z
+  .object({
+    /** Preferred field name. */
+    title: z.string().trim().min(1).optional(),
+    /** Alias observed in some local model tool calls. */
+    query: z.string().trim().min(1).optional()
+  })
+  .transform((raw) => {
+    const title = raw.title ?? raw.query;
+    if (!title) {
+      throw new Error('title is required');
+    }
+    return { title };
+  });
 
 export const AddSeriesInputSchema = z.object({
   tvdbId: z.number().int().positive()

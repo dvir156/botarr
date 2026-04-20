@@ -32,6 +32,7 @@ describe('executeTool', () => {
   const grabSeriesReleaseMock = vi.mocked(sonarrTools.grabSeriesRelease);
   const getSeriesEpisodeStatsMock = vi.mocked(sonarrTools.getSeriesEpisodeStats);
   const searchMovieMock = vi.mocked(radarrTools.searchMovie);
+  const searchSeriesMock = vi.mocked(sonarrTools.searchSeries);
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -177,5 +178,19 @@ describe('executeTool', () => {
     });
 
     expect(searchMovieMock).toHaveBeenCalledWith({ query: 'Thunderbolts' }, { requestId: 'r1' });
+  });
+
+  it('accepts query alias for searchSeries tool input', async () => {
+    searchSeriesMock.mockResolvedValueOnce({ matches: [] });
+
+    await executeTool({
+      requestId: 'r1',
+      telegramUserId: userId,
+      name: 'searchSeries',
+      rawArguments: JSON.stringify({ query: 'Summer House' }),
+      userText: 'Download summer house season 10 episode 12'
+    });
+
+    expect(searchSeriesMock).toHaveBeenCalledWith({ query: 'Summer House' }, { requestId: 'r1' });
   });
 });
